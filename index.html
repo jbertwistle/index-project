@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e9e7df">
+  <title>INDEX</title>
+
+  <style>
+    :root {
+      --paper: #e9e7df;
+      --ink: #101010;
+      --muted: #66645e;
+      --line: #101010;
+      --panel: #f4f2ea;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    body { padding: 18px; }
+
+    .shell {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid var(--line);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.5rem, 10vw, 6rem);
+      line-height: 0.82;
+      letter-spacing: -0.08em;
+    }
+
+    .version {
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    .intro {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .intro p {
+      max-width: 60ch;
+      margin: 0;
+      line-height: 1.45;
+    }
+
+    button,
+    .file-button {
+      appearance: none;
+      border: 2px solid var(--ink);
+      border-radius: 0;
+      background: var(--ink);
+      color: var(--paper);
+      padding: 13px 16px;
+      font: inherit;
+      font-weight: bold;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-block;
+      text-align: center;
+    }
+
+    button:hover,
+    .file-button:hover {
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.55;
+    }
+
+    input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .status-row {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.8rem;
+    }
+
+    #status { margin: 0; }
+
+    .record-count {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 1px;
+      padding: 1px 0;
+      background: var(--line);
+    }
+
+    .record {
+      min-width: 0;
+      background: var(--panel);
+    }
+
+    .record img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      image-rendering: auto;
+      filter: grayscale(1);
+      background: #ccc;
+    }
+
+    .record-meta {
+      min-height: 58px;
+      padding: 8px;
+      border-top: 1px solid var(--line);
+      font-size: 0.68rem;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      min-height: 38vh;
+      display: grid;
+      place-items: center;
+      padding: 40px 20px;
+      background: var(--panel);
+      text-align: center;
+    }
+
+    .working {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      padding: 30px;
+      background: rgba(16, 16, 16, 0.92);
+      color: var(--paper);
+      text-align: center;
+    }
+
+    .working.visible { display: grid; }
+
+    .working strong {
+      font-size: clamp(1.3rem, 6vw, 3rem);
+      text-transform: uppercase;
+    }
+
+    footer {
+      padding: 14px 0 40px;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 650px) {
+      body { padding: 12px; }
+
+      .intro {
+        grid-template-columns: 1fr;
+      }
+
+      .file-button {
+        width: 100%;
+        padding: 16px;
+      }
+
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="shell">
+    <header>
+      <h1>INDEX</h1>
+      <div class="version">DATABASE DOCUMENTARY / 0.1</div>
+    </header>
+
+    <section class="intro">
+      <p>
+        A shared image record. Photographs contributed here are reduced to a
+        sixteen-level monochrome image and entered into the same database.
+      </p>
+
+      <label class="file-button" for="photo-input">Add photograph</label>
+      <input id="photo-input" type="file" accept="image/*" capture="environment">
+    </section>
+
+    <section class="status-row" aria-live="polite">
+      <p id="status">Connecting to record…</p>
+      <span id="record-count" class="record-count"></span>
+    </section>
+
+    <section id="grid" class="grid" aria-label="Shared image record">
+      <div class="empty">OPENING DATABASE…</div>
+    </section>
+
+    <footer>
+      Images are displayed newest first. The record refreshes automatically.
+    </footer>
+  </main>
+
+  <div id="working" class="working" role="status" aria-live="assertive">
+    <strong id="working-text">Processing image…</strong>
+  </div>
+
+  <canvas id="processor" hidden></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Public browser credentials. Never put a Supabase secret/service-role key here.
+    const SUPABASE_URL = "https://kbmiaxxzihemwkbsrgtc.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_tkUGtxk0ivY4TNmbFcVZGw_k0fnOwmq";
+
+    const BUCKET = "photos";
+    const REFRESH_EVERY_MS = 5000;
+    const MAX_DISPLAYED = 100;
+
+    const client = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    const input = document.getElementById("photo-input");
+    const grid = document.getElementById("grid");
+    const status = document.getElementById("status");
+    const count = document.getElementById("record-count");
+    const working = document.getElementById("working");
+    const workingText = document.getElementById("working-text");
+    const canvas = document.getElementById("processor");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+
+    function setWorking(isWorking, message = "Processing image…") {
+      workingText.textContent = message;
+      working.classList.toggle("visible", isWorking);
+      input.disabled = isWorking;
+    }
+
+    function safeName(name) {
+      return name
+        .toLowerCase()
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^a-z0-9_-]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 40) || "image";
+    }
+
+    function dateLabel(value) {
+      if (!value) return "DATE UNKNOWN";
+      const date = new Date(value);
+      return new Intl.DateTimeFormat("en-CA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(date);
+    }
+
+    async function fileToImage(file) {
+      const url = URL.createObjectURL(file);
+
+      try {
+        const image = new Image();
+        image.decoding = "async";
+
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = () => reject(new Error("The image could not be opened."));
+          image.src = url;
+        });
+
+        return image;
+      } finally {
+        // The image has decoded by the time this executes.
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    }
+
+    async function makeDitheredWebP(file) {
+      const image = await fileToImage(file);
+
+      // Keep files modest enough for fast mobile collaboration.
+      const maximumSide = 1400;
+      const scale = Math.min(1, maximumSide / Math.max(image.width, image.height));
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+
+      canvas.width = width;
+      canvas.height = height;
+      context.clearRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+
+      const frame = context.getImageData(0, 0, width, height);
+      const pixels = frame.data;
+
+      // 4x4 Bayer matrix. It preserves only 16 grey values while introducing
+      // a visible low-resolution print/computer texture.
+      const bayer = [
+        [0,  8,  2, 10],
+        [12, 4, 14,  6],
+        [3, 11,  1,  9],
+        [15, 7, 13,  5]
+      ];
+
+      const levels = 16;
+      const step = 255 / (levels - 1);
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const i = (y * width + x) * 4;
+          const r = pixels[i];
+          const g = pixels[i + 1];
+          const b = pixels[i + 2];
+
+          // Perceptual luminance.
+          const grey = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+          // Small ordered threshold shift before quantization.
+          const threshold = (bayer[y % 4][x % 4] / 15 - 0.5) * step;
+          const quantized = Math.max(
+            0,
+            Math.min(255, Math.round((grey + threshold) / step) * step)
+          );
+
+          pixels[i] = quantized;
+          pixels[i + 1] = quantized;
+          pixels[i + 2] = quantized;
+        }
+      }
+
+      context.putImageData(frame, 0, 0);
+
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          result => result ? resolve(result) : reject(new Error("Image conversion failed.")),
+          "image/webp",
+          0.86
+        );
+      });
+
+      return blob;
+    }
+
+    async function uploadPhoto(file) {
+      if (!file || !file.type.startsWith("image/")) {
+        throw new Error("Please choose a photograph.");
+      }
+
+      setWorking(true, "Converting to 16-level monochrome…");
+      const processed = await makeDitheredWebP(file);
+
+      setWorking(true, "Entering photograph into record…");
+
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const random = crypto.getRandomValues(new Uint32Array(1))[0].toString(16);
+      const path = `${stamp}_${random}_${safeName(file.name)}.webp`;
+
+      const { error } = await client.storage
+        .from(BUCKET)
+        .upload(path, processed, {
+          contentType: "image/webp",
+          cacheControl: "3600",
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      await loadRecord();
+      status.textContent = "Photograph entered into the shared record.";
+    }
+
+    function makeRecordCard(file) {
+      const publicResult = client.storage.from(BUCKET).getPublicUrl(file.name);
+      const url = publicResult.data.publicUrl;
+
+      const article = document.createElement("article");
+      article.className = "record";
+
+      const image = document.createElement("img");
+      image.src = url;
+      image.alt = "A contributed monochrome photograph";
+      image.loading = "lazy";
+      image.decoding = "async";
+
+      const meta = document.createElement("div");
+      meta.className = "record-meta";
+
+      const date = document.createElement("div");
+      date.textContent = dateLabel(file.created_at);
+
+      const id = document.createElement("div");
+      id.textContent = `RECORD / ${file.id || file.name.slice(0, 18)}`;
+
+      meta.append(date, id);
+      article.append(image, meta);
+
+      return article;
+    }
+
+    async function loadRecord() {
+      status.textContent = "Reading database…";
+
+      const { data, error } = await client.storage
+        .from(BUCKET)
+        .list("", {
+          limit: MAX_DISPLAYED,
+          offset: 0,
+          sortBy: { column: "created_at", order: "desc" }
+        });
+
+      if (error) throw error;
+
+      const files = (data || []).filter(item => item.name && item.id);
+
+      grid.replaceChildren();
+
+      if (!files.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "NO RECORDS YET / ADD THE FIRST PHOTOGRAPH";
+        grid.append(empty);
+      } else {
+        const fragment = document.createDocumentFragment();
+        files.forEach(file => fragment.append(makeRecordCard(file)));
+        grid.append(fragment);
+      }
+
+      count.textContent = `${files.length} RECORD${files.length === 1 ? "" : "S"}`;
+      status.textContent = "Shared record online.";
+    }
+
+    input.addEventListener("change", async event => {
+      const file = event.target.files && event.target.files[0];
+
+      try {
+        await uploadPhoto(file);
+      } catch (error) {
+        console.error(error);
+        status.textContent = `ERROR: ${error.message || "Upload failed."}`;
+        alert(
+          "INDEX could not add that photograph.\n\n" +
+          (error.message || "Unknown upload error")
+        );
+      } finally {
+        setWorking(false);
+        input.value = "";
+      }
+    });
+
+    async function start() {
+      try {
+        await loadRecord();
+      } catch (error) {
+        console.error(error);
+        grid.innerHTML = '<div class="empty">DATABASE CONNECTION FAILED</div>';
+        status.textContent = `ERROR: ${error.message || "Could not read the record."}`;
+      }
+
+      window.setInterval(async () => {
+        if (document.visibilityState !== "visible" || working.classList.contains("visible")) {
+          return;
+        }
+
+        try {
+          await loadRecord();
+        } catch (error) {
+          console.error("Automatic refresh failed:", error);
+        }
+      }, REFRESH_EVERY_MS);
+    }
+
+    start();
+  </script>
+</body>
+</html>
