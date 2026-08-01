@@ -40,6 +40,11 @@
     .metric{padding:12px;background:var(--panel)}
     .metric span{display:block;margin-bottom:5px;color:var(--muted);font-size:.68rem;text-transform:uppercase}
     .metric strong{font-size:clamp(1.1rem,4vw,1.8rem);font-weight:normal}
+    .relations{padding:11px 0;border-bottom:1px solid}
+    .relations-label{margin-bottom:8px;color:var(--muted);font-size:.68rem;text-transform:uppercase}
+    .relation-buttons{display:flex;flex-wrap:wrap;gap:6px}
+    .relation-buttons button{min-height:34px;padding:6px 9px;border-width:1px;background:transparent;color:var(--ink);font-size:.68rem}
+    .relation-buttons button.active{background:var(--ink);color:var(--paper)}
     .timeline{display:flex;align-items:center;gap:4px;min-height:50px;padding:10px 0;border-bottom:1px solid;overflow:hidden}
     .dot{width:9px;height:9px;flex:0 0 auto;border:1px solid;border-radius:50%;background:var(--ink)}
     .gap{height:1px;min-width:2px;max-width:70px;flex:1;background:var(--ink)}
@@ -50,13 +55,23 @@
     .empty{grid-column:1/-1;min-height:35vh;display:grid;place-items:center;padding:35px 18px;background:var(--panel);text-align:center}
     .working{position:fixed;inset:0;z-index:20;display:none;place-items:center;padding:25px;background:rgba(16,16,16,.94);color:var(--paper);text-align:center}
     .working.visible{display:grid}.working strong{font-size:clamp(1.2rem,6vw,2.7rem);text-transform:uppercase}
+    .attention-dialog{width:min(94vw,560px);padding:0;border:2px solid var(--ink);border-radius:0;background:var(--paper);color:var(--ink)}
+    .attention-dialog::backdrop{background:rgba(16,16,16,.88)}
+    .attention-inner{padding:18px}
+    .attention-inner h2{margin:0 0 7px;font-size:1rem;text-transform:uppercase}
+    .attention-inner p{margin:0 0 15px;color:var(--muted);line-height:1.4}
+    .attention-options{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .attention-options button{background:transparent;color:var(--ink)}
+    .attention-options button:hover,.attention-options button:focus{background:var(--ink);color:var(--paper)}
+    .attention-cancel{width:100%;margin-top:12px;background:transparent;color:var(--ink)}
+    @media(max-width:520px){.attention-options{grid-template-columns:repeat(2,1fr)}}
     footer{padding:15px 0 35px;color:var(--muted);font-size:.68rem}
     @media(max-width:680px){.start-grid{grid-template-columns:1fr}.record-head{grid-template-columns:1fr}.actions{grid-template-columns:1fr 1fr;min-width:0}.metrics{grid-template-columns:1fr 1fr}.metric:last-child{grid-column:1/-1}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
 </head>
 <body>
 <main class="shell">
-  <header><h1>INDEX</h1><div class="version">DATABASE DOCUMENTARY / 0.2</div></header>
+  <header><h1>INDEX</h1><div class="version">DATABASE DOCUMENTARY / 0.3</div></header>
 
   <section id="start" class="screen active">
     <p class="intro">Create a shared record for an event, or join one using its six-character address. Each photograph becomes a sixteen-level monochrome entry in the same database.</p>
@@ -92,12 +107,25 @@
       <div class="metric"><span>Contributors</span><strong id="contributors">0</strong></div>
       <div class="metric"><span>Duration</span><strong id="duration">0 min</strong></div>
     </div>
+    <div class="relations">
+      <div class="relations-label">View relationship / attention</div>
+      <div id="relation-buttons" class="relation-buttons"></div>
+    </div>
     <div id="timeline" class="timeline"></div>
     <section id="grid" class="grid"><div class="empty">OPENING RECORD…</div></section>
   </section>
 
   <footer>No profiles, likes or ranking. Entries are arranged by recorded time.</footer>
 </main>
+
+<dialog id="attention-dialog" class="attention-dialog">
+  <div class="attention-inner">
+    <h2>What drew your attention?</h2>
+    <p>Choose the strongest reason you made this photograph.</p>
+    <div id="attention-options" class="attention-options"></div>
+    <button id="attention-cancel" class="attention-cancel" type="button">Cancel photograph</button>
+  </div>
+</dialog>
 
 <div id="working" class="working"><strong id="working-text">Working…</strong></div>
 <canvas id="processor" hidden></canvas>
@@ -109,8 +137,9 @@ const SUPABASE_KEY="sb_publishable_tkUGtxk0ivY4TNmbFcVZGw_k0fnOwmq";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const BUCKET="photos", CODE_CHARS="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const $=id=>document.getElementById(id);
-const start=$("start"),record=$("record"),createBtn=$("create"),joinBtn=$("join"),shareBtn=$("share"),leaveBtn=$("leave"),newTitle=$("new-title"),joinCode=$("join-code"),photo=$("photo"),activeCode=$("active-code"),activeTitle=$("active-title"),status=$("status"),updated=$("updated"),entriesEl=$("entries"),contributorsEl=$("contributors"),durationEl=$("duration"),timeline=$("timeline"),grid=$("grid"),working=$("working"),workingText=$("working-text"),canvas=$("processor"),ctx=canvas.getContext("2d",{willReadFrequently:true});
-let current=null,timer=null;
+const start=$("start"),record=$("record"),createBtn=$("create"),joinBtn=$("join"),shareBtn=$("share"),leaveBtn=$("leave"),newTitle=$("new-title"),joinCode=$("join-code"),photo=$("photo"),activeCode=$("active-code"),activeTitle=$("active-title"),status=$("status"),updated=$("updated"),entriesEl=$("entries"),contributorsEl=$("contributors"),durationEl=$("duration"),relationButtons=$("relation-buttons"),timeline=$("timeline"),grid=$("grid"),attentionDialog=$("attention-dialog"),attentionOptions=$("attention-options"),attentionCancel=$("attention-cancel"),working=$("working"),workingText=$("working-text"),canvas=$("processor"),ctx=canvas.getContext("2d",{willReadFrequently:true});
+const ATTENTION=["people","movement","object","place","light","pattern","text","sound","other"];
+let current=null,timer=null,allEntries=[],activeAttention="all",pendingFile=null;
 const participant=localStorage.getItem("index-participant-id")||crypto.randomUUID();
 localStorage.setItem("index-participant-id",participant);
 
@@ -184,6 +213,72 @@ async function shareRecord(){
   }
 }
 
+
+function chooseAttention(file){
+  pendingFile=file;
+  attentionOptions.replaceChildren();
+
+  ATTENTION.forEach(value=>{
+    const button=document.createElement("button");
+    button.type="button";
+    button.textContent=value;
+    button.addEventListener("click",async()=>{
+      attentionDialog.close();
+      const chosen=pendingFile;
+      pendingFile=null;
+      await upload(chosen,value);
+    });
+    attentionOptions.append(button);
+  });
+
+  attentionDialog.showModal();
+}
+
+function renderRelationButtons(entries){
+  relationButtons.replaceChildren();
+  const counts={all:entries.length};
+  ATTENTION.forEach(value=>counts[value]=0);
+  entries.forEach(entry=>{
+    if(entry.attention&&Object.hasOwn(counts,entry.attention))counts[entry.attention]++;
+  });
+
+  ["all",...ATTENTION].forEach(value=>{
+    const button=document.createElement("button");
+    button.type="button";
+    button.classList.toggle("active",activeAttention===value);
+    button.textContent=value.toUpperCase()+" / "+counts[value];
+    button.addEventListener("click",()=>{
+      activeAttention=value;
+      renderCurrentView();
+    });
+    relationButtons.append(button);
+  });
+}
+
+function renderCurrentView(){
+  const visible=activeAttention==="all"
+    ? allEntries
+    : allEntries.filter(entry=>entry.attention===activeAttention);
+
+  renderRelationButtons(allEntries);
+  drawTimeline(visible);
+  grid.replaceChildren();
+
+  if(!visible.length){
+    const empty=document.createElement("div");
+    empty.className="empty";
+    empty.textContent=activeAttention==="all"
+      ? "NO ENTRIES YET / ADD THE FIRST PHOTOGRAPH"
+      : "NO "+activeAttention.toUpperCase()+" OBSERVATIONS IN THIS RECORD";
+    grid.append(empty);
+    return;
+  }
+
+  const fragment=document.createDocumentFragment();
+  visible.forEach(entry=>fragment.append(card(entry)));
+  grid.append(fragment);
+}
+
 function drawTimeline(a){
   timeline.replaceChildren();
   if(!a.length){const s=document.createElement("span");s.textContent="NO TEMPORAL DATA YET";s.style.cssText="color:var(--muted);font-size:.7rem";timeline.append(s);return}
@@ -198,18 +293,17 @@ function card(e){
   const a=document.createElement("article");a.className="entry";
   const img=document.createElement("img");img.src=e.image_url;img.alt="A contributed monochrome observation";img.loading="lazy";
   const m=document.createElement("div");m.className="meta";
-  m.textContent=fmt(e.created_at)+"\nENTRY / "+String(e.id).padStart(6,"0")+"\nSOURCE / "+(e.participant_id===participant?"THIS DEVICE":e.participant_id.slice(0,4).toUpperCase());
+  m.textContent=fmt(e.created_at)+"\nENTRY / "+String(e.id).padStart(6,"0")+"\nATTENTION / "+(e.attention||"UNASSIGNED").toUpperCase()+"\nSOURCE / "+(e.participant_id===participant?"THIS DEVICE":e.participant_id.slice(0,4).toUpperCase());
   m.style.whiteSpace="pre-line";a.append(img,m);return a
 }
 
 async function loadEntries(reading=true){
   if(!current)return;if(reading)setStatus("Reading record…");
-  const {data,error}=await db.from("index_entries").select("id,image_url,participant_id,captured_at,created_at").eq("record_code",current.code).order("created_at",{ascending:false}).limit(250);
+  const {data,error}=await db.from("index_entries").select("id,image_url,participant_id,attention,captured_at,created_at").eq("record_code",current.code).order("created_at",{ascending:false}).limit(250);
   if(error){setStatus("ERROR / "+error.message,true);return}
-  const a=data||[];entriesEl.textContent=a.length;contributorsEl.textContent=new Set(a.map(x=>x.participant_id)).size;durationEl.textContent=dur(a);updated.textContent=a.length?"UPDATED "+fmt(a[0].created_at):"";
-  drawTimeline(a);grid.replaceChildren();
-  if(!a.length){const e=document.createElement("div");e.className="empty";e.textContent="NO ENTRIES YET / ADD THE FIRST PHOTOGRAPH";grid.append(e)}
-  else{const f=document.createDocumentFragment();a.forEach(x=>f.append(card(x)));grid.append(f)}
+  const a=data||[];allEntries=a;
+  entriesEl.textContent=a.length;contributorsEl.textContent=new Set(a.map(x=>x.participant_id)).size;durationEl.textContent=dur(a);updated.textContent=a.length?"UPDATED "+fmt(a[0].created_at):"";
+  renderCurrentView();
   setStatus("Record "+current.code+" online.");
 }
 
@@ -228,7 +322,7 @@ async function process(file){
   return await new Promise((ok,no)=>canvas.toBlob(v=>v?ok(v):no(new Error("Conversion failed.")),"image/webp",.86))
 }
 
-async function upload(file){
+async function upload(file,attention){
   if(!current||!file||!file.type.startsWith("image/"))return;
   busy(true,"Converting to 16-level monochrome…");
   try{
@@ -236,7 +330,7 @@ async function upload(file){
     busy(true,"Entering photograph into record…");
     const {error:uerr}=await db.storage.from(BUCKET).upload(path,blob,{contentType:"image/webp",cacheControl:"3600",upsert:false});if(uerr)throw uerr;
     const url=db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
-    const {error:rerr}=await db.from("index_entries").insert({record_code:current.code,storage_path:path,image_url:url,participant_id:participant,captured_at:file.lastModified?new Date(file.lastModified).toISOString():null});if(rerr)throw rerr;
+    const {error:rerr}=await db.from("index_entries").insert({record_code:current.code,storage_path:path,image_url:url,participant_id:participant,attention,captured_at:file.lastModified?new Date(file.lastModified).toISOString():null});if(rerr)throw rerr;
     await db.from("index_records").update({last_activity_at:new Date().toISOString()}).eq("code",current.code);
     await loadEntries(false);setStatus("Photograph entered into the shared record.");
   }catch(e){alert("INDEX could not add the photograph.\n\n"+(e.message||"Unknown error"))}finally{photo.value="";busy(false)}
@@ -249,7 +343,19 @@ leaveBtn.addEventListener("click",showStart);
 joinCode.addEventListener("input",()=>joinCode.value=norm(joinCode.value));
 joinCode.addEventListener("keydown",e=>{if(e.key==="Enter")joinRecord()});
 newTitle.addEventListener("keydown",e=>{if(e.key==="Enter")createRecord()});
-photo.addEventListener("change",e=>upload(e.target.files&&e.target.files[0]));
+photo.addEventListener("change",e=>{
+  const file=e.target.files&&e.target.files[0];
+  if(file)chooseAttention(file);
+});
+attentionCancel.addEventListener("click",()=>{
+  pendingFile=null;
+  photo.value="";
+  attentionDialog.close();
+});
+attentionDialog.addEventListener("cancel",()=>{
+  pendingFile=null;
+  photo.value="";
+});
 const initial=norm(new URL(location.href).searchParams.get("record"));if(initial.length===6)joinRecord(initial);
 </script>
 </body>
