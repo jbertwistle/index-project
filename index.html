@@ -82,6 +82,7 @@
       <div class="actions">
         <label class="upload" for="photo">Add photograph</label>
         <input id="photo" type="file" accept="image/*" capture="environment">
+        <button id="share" class="secondary" type="button">Share record</button>
         <button id="leave" class="secondary" type="button">Leave record</button>
       </div>
     </div>
@@ -108,7 +109,7 @@ const SUPABASE_KEY="sb_publishable_tkUGtxk0ivY4TNmbFcVZGw_k0fnOwmq";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const BUCKET="photos", CODE_CHARS="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const $=id=>document.getElementById(id);
-const start=$("start"),record=$("record"),createBtn=$("create"),joinBtn=$("join"),leaveBtn=$("leave"),newTitle=$("new-title"),joinCode=$("join-code"),photo=$("photo"),activeCode=$("active-code"),activeTitle=$("active-title"),status=$("status"),updated=$("updated"),entriesEl=$("entries"),contributorsEl=$("contributors"),durationEl=$("duration"),timeline=$("timeline"),grid=$("grid"),working=$("working"),workingText=$("working-text"),canvas=$("processor"),ctx=canvas.getContext("2d",{willReadFrequently:true});
+const start=$("start"),record=$("record"),createBtn=$("create"),joinBtn=$("join"),shareBtn=$("share"),leaveBtn=$("leave"),newTitle=$("new-title"),joinCode=$("join-code"),photo=$("photo"),activeCode=$("active-code"),activeTitle=$("active-title"),status=$("status"),updated=$("updated"),entriesEl=$("entries"),contributorsEl=$("contributors"),durationEl=$("duration"),timeline=$("timeline"),grid=$("grid"),working=$("working"),workingText=$("working-text"),canvas=$("processor"),ctx=canvas.getContext("2d",{willReadFrequently:true});
 let current=null,timer=null;
 const participant=localStorage.getItem("index-participant-id")||crypto.randomUUID();
 localStorage.setItem("index-participant-id",participant);
@@ -145,6 +146,42 @@ async function joinRecord(value=joinCode.value){
     if(error)throw error;if(!data)throw new Error("Record "+c+" was not found.");
     joinCode.value="";showRecord(data);await loadEntries();
   }catch(e){alert(e.message||"Could not open record.")}finally{busy(false)}
+}
+
+async function shareRecord(){
+  if(!current)return;
+
+  const url=new URL(location.href);
+  url.searchParams.set("record",current.code);
+
+  const shareData={
+    title:"INDEX record "+current.code,
+    text:(current.title||"Shared INDEX record")+" — join this collaborative documentary record.",
+    url:url.toString()
+  };
+
+  try{
+    if(navigator.share){
+      await navigator.share(shareData);
+      setStatus("Record invite shared.");
+      return;
+    }
+
+    if(navigator.clipboard&&window.isSecureContext){
+      await navigator.clipboard.writeText(url.toString());
+      setStatus("Record invite copied.");
+      const old=shareBtn.textContent;
+      shareBtn.textContent="Link copied";
+      setTimeout(()=>shareBtn.textContent=old,1800);
+      return;
+    }
+
+    window.prompt("Copy this record address:",url.toString());
+  }catch(error){
+    if(error&&error.name==="AbortError")return;
+    console.error(error);
+    window.prompt("Copy this record address:",url.toString());
+  }
 }
 
 function drawTimeline(a){
@@ -207,6 +244,7 @@ async function upload(file){
 
 createBtn.addEventListener("click",createRecord);
 joinBtn.addEventListener("click",()=>joinRecord());
+shareBtn.addEventListener("click",shareRecord);
 leaveBtn.addEventListener("click",showStart);
 joinCode.addEventListener("input",()=>joinCode.value=norm(joinCode.value));
 joinCode.addEventListener("keydown",e=>{if(e.key==="Enter")joinRecord()});
