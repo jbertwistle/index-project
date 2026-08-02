@@ -1,1 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e9e7df">
+  <title>INDEX</title>
+  <style>
+    :root{--paper:#e9e7df;--panel:#f4f2ea;--ink:#101010;--muted:#68655e;--error:#8b1d16}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);font-family:"Courier New",monospace}
+    body{padding:16px}
+    button,input{font:inherit}
+    button,.upload{min-height:50px;border:2px solid var(--ink);border-radius:0;padding:11px 14px;background:var(--ink);color:var(--paper);font-weight:bold;text-transform:uppercase;cursor:pointer}
+    button.secondary{background:transparent;color:var(--ink)}
+    button:disabled{opacity:.45;cursor:wait}
+    input[type=text]{width:100%;min-height:50px;border:2px solid var(--ink);border-radius:0;padding:10px 12px;background:var(--panel);text-transform:uppercase}
+    input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+    .shell{width:min(1100px,100%);margin:auto}
+    header{display:flex;justify-content:space-between;align-items:end;gap:16px;padding-bottom:12px;border-bottom:3px solid}
+    h1{margin:0;font-size:clamp(2.8rem,11vw,6.3rem);line-height:.8;letter-spacing:-.09em}
+    .version{font-size:.72rem;white-space:nowrap}
+    .screen{display:none}.screen.active{display:block}
+    .intro{max-width:62ch;margin:20px 0 28px;line-height:1.5}
+    .start-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid;background:var(--ink)}
+    .panel{padding:clamp(18px,4vw,36px);background:var(--panel)}
+    .panel h2{margin:0 0 10px;font-size:1rem;text-transform:uppercase}
+    .panel p{min-height:3.5em;margin:0 0 20px;color:var(--muted);line-height:1.4}
+    .field{display:grid;gap:7px;margin-bottom:12px}
+    .field label{font-size:.74rem;text-transform:uppercase}
+    .record-head{display:grid;grid-template-columns:1fr auto;gap:16px;padding:18px 0;border-bottom:1px solid}
+    .label{color:var(--muted);font-size:.72rem;text-transform:uppercase}
+    .code{margin:3px 0 0;font-size:clamp(2.2rem,10vw,5rem);line-height:.9;letter-spacing:.08em}
+    .title{margin:10px 0 0;font-size:1rem;font-weight:normal}
+    .actions{display:grid;gap:8px;min-width:180px}
+    .upload{display:grid;place-items:center;text-align:center}
+    .status{min-height:44px;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid;font-size:.78rem}
+    #status.error{color:var(--error)}
+    .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--ink);border-bottom:1px solid}
+    .metric{padding:12px;background:var(--panel)}
+    .metric span{display:block;margin-bottom:5px;color:var(--muted);font-size:.68rem;text-transform:uppercase}
+    .metric strong{font-size:clamp(1.1rem,4vw,1.8rem);font-weight:normal}
+    .relations{padding:11px 0;border-bottom:1px solid}
+    .relations-label{margin-bottom:8px;color:var(--muted);font-size:.68rem;text-transform:uppercase}
+    .relation-buttons{display:flex;flex-wrap:wrap;gap:6px}
+    .relation-buttons button{min-height:34px;padding:6px 9px;border-width:1px;background:transparent;color:var(--ink);font-size:.68rem}
+    .relation-buttons button.active{background:var(--ink);color:var(--paper)}
+    .timeline{display:flex;align-items:center;gap:4px;min-height:50px;padding:10px 0;border-bottom:1px solid;overflow:hidden}
+    .dot{width:9px;height:9px;flex:0 0 auto;border:1px solid;border-radius:50%;background:var(--ink)}
+    .gap{height:1px;min-width:2px;max-width:70px;flex:1;background:var(--ink)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:1px;padding-top:1px;background:var(--ink)}
+    .entry{background:var(--panel);position:relative}
+    .entry.selected{outline:4px solid var(--ink);outline-offset:-4px}
+    .entry-link-button{width:100%;min-height:34px;border-width:1px 0 0;padding:6px 8px;background:transparent;color:var(--ink);font-size:.66rem}
+    .entry-link-button:hover,.entry-link-button:focus{background:var(--ink);color:var(--paper)}
+    .relationship-summary{padding:10px 0;border-bottom:1px solid;font-size:.7rem;color:var(--muted)}
+    .relationship-dialog{width:min(94vw,560px);padding:0;border:2px solid var(--ink);border-radius:0;background:var(--paper);color:var(--ink)}
+    .relationship-dialog::backdrop{background:rgba(16,16,16,.88)}
+    .relationship-inner{padding:18px}
+    .relationship-inner h2{margin:0 0 7px;font-size:1rem;text-transform:uppercase}
+    .relationship-inner p{margin:0 0 15px;color:var(--muted);line-height:1.4}
+    .relationship-options{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .relationship-options button{background:transparent;color:var(--ink)}
+    .relationship-options button:hover,.relationship-options button:focus{background:var(--ink);color:var(--paper)}
+    .relationship-cancel{width:100%;margin-top:12px;background:transparent;color:var(--ink)}
+    .entry img{display:block;width:100%;aspect-ratio:1;object-fit:cover;filter:grayscale(1);background:#ccc}
+    .meta{min-height:62px;padding:7px;border-top:1px solid;font-size:.66rem;line-height:1.4;overflow-wrap:anywhere}
+    .empty{grid-column:1/-1;min-height:35vh;display:grid;place-items:center;padding:35px 18px;background:var(--panel);text-align:center}
+    .working{position:fixed;inset:0;z-index:20;display:none;place-items:center;padding:25px;background:rgba(16,16,16,.94);color:var(--paper);text-align:center}
+    .working.visible{display:grid}.working strong{font-size:clamp(1.2rem,6vw,2.7rem);text-transform:uppercase}
+    .attention-dialog{width:min(94vw,560px);padding:0;border:2px solid var(--ink);border-radius:0;background:var(--paper);color:var(--ink)}
+    .attention-dialog::backdrop{background:rgba(16,16,16,.88)}
+    .attention-inner{padding:18px}
+    .attention-inner h2{margin:0 0 7px;font-size:1rem;text-transform:uppercase}
+    .attention-inner p{margin:0 0 15px;color:var(--muted);line-height:1.4}
+    .attention-options{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .attention-options button{background:transparent;color:var(--ink)}
+    .attention-options button:hover,.attention-options button:focus{background:var(--ink);color:var(--paper)}
+    .attention-cancel{width:100%;margin-top:12px;background:transparent;color:var(--ink)}
+    @media(max-width:520px){.attention-options{grid-template-columns:repeat(2,1fr)}}
+    footer{padding:15px 0 35px;color:var(--muted);font-size:.68rem}
+    @media(max-width:680px){.start-grid{grid-template-columns:1fr}.record-head{grid-template-columns:1fr}.actions{grid-template-columns:1fr 1fr;min-width:0}.metrics{grid-template-columns:1fr 1fr}.metric:last-child{grid-column:1/-1}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <header><h1>INDEX</h1><div class="version">DATABASE DOCUMENTARY / 0.4</div></header>
 
+  <section id="start" class="screen active">
+    <p class="intro">Create a shared record for an event, or join one using its six-character address. Each photograph becomes a sixteen-level monochrome entry in the same database.</p>
+    <div class="start-grid">
+      <section class="panel">
+        <h2>Create record</h2>
+        <p>Begin a new collaborative image database and receive its address.</p>
+        <div class="field"><label for="new-title">Record title — optional</label><input id="new-title" type="text" maxlength="100" placeholder="EVENT OR PLACE"></div>
+        <button id="create" type="button">Create record</button>
+      </section>
+      <section class="panel">
+        <h2>Join record</h2>
+        <p>Enter the address shown on another participant’s screen.</p>
+        <div class="field"><label for="join-code">Record address</label><input id="join-code" type="text" maxlength="6" autocomplete="off" placeholder="7A3M2K"></div>
+        <button id="join" type="button">Join record</button>
+      </section>
+    </div>
+  </section>
+
+  <section id="record" class="screen">
+    <div class="record-head">
+      <div><div class="label">Record address</div><h2 id="active-code" class="code">------</h2><p id="active-title" class="title"></p></div>
+      <div class="actions">
+        <label class="upload" for="photo">Add photograph</label>
+        <input id="photo" type="file" accept="image/*" capture="environment">
+        <button id="share" class="secondary" type="button">Share record</button>
+        <button id="leave" class="secondary" type="button">Leave record</button>
+      </div>
+    </div>
+    <div class="status"><span id="status">Opening record…</span><span id="updated"></span></div>
+    <div class="metrics">
+      <div class="metric"><span>Entries</span><strong id="entries">0</strong></div>
+      <div class="metric"><span>Contributors</span><strong id="contributors">0</strong></div>
+      <div class="metric"><span>Duration</span><strong id="duration">0 min</strong></div>
+    </div>
+    <div class="relations">
+      <div class="relations-label">View relationship / attention</div>
+      <div id="relation-buttons" class="relation-buttons"></div>
+    </div>
+    <div id="relationship-summary" class="relationship-summary">
+      RELATIONSHIPS / 0 LINKS / 0 INDEPENDENT SOURCES
+    </div>
+    <div id="timeline" class="timeline"></div>
+    <section id="grid" class="grid"><div class="empty">OPENING RECORD…</div></section>
+  </section>
+
+  <footer>No profiles, likes or ranking. Entries are arranged by recorded time.</footer>
+</main>
+
+<dialog id="relationship-dialog" class="relationship-dialog">
+  <div class="relationship-inner">
+    <h2>How do these observations relate?</h2>
+    <p id="relationship-pair"></p>
+    <div id="relationship-options" class="relationship-options"></div>
+    <button id="relationship-cancel" class="relationship-cancel" type="button">Cancel relationship</button>
+  </div>
+</dialog>
+
+<dialog id="attention-dialog" class="attention-dialog">
+  <div class="attention-inner">
+    <h2>What drew your attention?</h2>
+    <p>Choose the strongest reason you made this photograph.</p>
+    <div id="attention-options" class="attention-options"></div>
+    <button id="attention-cancel" class="attention-cancel" type="button">Cancel photograph</button>
+  </div>
+</dialog>
+
+<div id="working" class="working"><strong id="working-text">Working…</strong></div>
+<canvas id="processor" hidden></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL="https://kbmiaxxzihemwkbsrgtc.supabase.co";
+const SUPABASE_KEY="sb_publishable_tkUGtxk0ivY4TNmbFcVZGw_k0fnOwmq";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const BUCKET="photos", CODE_CHARS="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const $=id=>document.getElementById(id);
+const start=$("start"),record=$("record"),createBtn=$("create"),joinBtn=$("join"),shareBtn=$("share"),leaveBtn=$("leave"),newTitle=$("new-title"),joinCode=$("join-code"),photo=$("photo"),activeCode=$("active-code"),activeTitle=$("active-title"),status=$("status"),updated=$("updated"),entriesEl=$("entries"),contributorsEl=$("contributors"),durationEl=$("duration"),relationButtons=$("relation-buttons"),relationshipSummary=$("relationship-summary"),timeline=$("timeline"),grid=$("grid"),relationshipDialog=$("relationship-dialog"),relationshipPair=$("relationship-pair"),relationshipOptions=$("relationship-options"),relationshipCancel=$("relationship-cancel"),attentionDialog=$("attention-dialog"),attentionOptions=$("attention-options"),attentionCancel=$("attention-cancel"),working=$("working"),workingText=$("working-text"),canvas=$("processor"),ctx=canvas.getContext("2d",{willReadFrequently:true});
+const ATTENTION=["people","movement","object","place","light","pattern","text","sound","other"];
+const RELATION_TYPES=[
+  ["same_subject","same subject"],
+  ["same_moment","same moment"],
+  ["sequence","sequence"],
+  ["context","context"],
+  ["contrast","contrast"]
+];
+let current=null,timer=null,allEntries=[],allRelationships=[],activeAttention="all",pendingFile=null,selectedEntry=null,pendingRelationshipPair=null;
+const participant=localStorage.getItem("index-participant-id")||crypto.randomUUID();
+localStorage.setItem("index-participant-id",participant);
+
+function norm(v){return String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6)}
+function code(){const b=crypto.getRandomValues(new Uint8Array(6));return Array.from(b,x=>CODE_CHARS[x%CODE_CHARS.length]).join("")}
+function busy(on,msg="Working…"){workingText.textContent=msg;working.classList.toggle("visible",on);photo.disabled=on;createBtn.disabled=on;joinBtn.disabled=on}
+function setStatus(msg,error=false){status.textContent=msg;status.classList.toggle("error",error)}
+function showStart(){current=null;selectedEntry=null;pendingRelationshipPair=null;start.classList.add("active");record.classList.remove("active");history.replaceState({},"",location.pathname);if(timer)clearInterval(timer)}
+function showRecord(r){current=r;activeCode.textContent=r.code;activeTitle.textContent=r.title||"UNTITLED RECORD";start.classList.remove("active");record.classList.add("active");const u=new URL(location.href);u.searchParams.set("record",r.code);history.replaceState({},"",u);if(timer)clearInterval(timer);timer=setInterval(()=>{if(document.visibilityState==="visible"&&current)loadEntries(false)},5000)}
+function fmt(v){return new Intl.DateTimeFormat("en-CA",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(new Date(v))}
+function dur(a){if(a.length<2)return"0 min";return Math.max(0,Math.round((new Date(a[0].created_at)-new Date(a[a.length-1].created_at))/60000))+" min"}
+
+async function createRecord(){
+  busy(true,"Creating record…");
+  try{
+    const title=newTitle.value.trim().slice(0,100)||null;
+    for(let i=0;i<8;i++){
+      const c=code();
+      const {data,error}=await db.from("index_records").insert({code:c,title}).select("code,title,created_at").single();
+      if(!error){newTitle.value="";showRecord(data);await loadEntries();return}
+      if(error.code!=="23505")throw error;
+    }
+    throw new Error("Could not generate a unique address.");
+  }catch(e){alert(e.message||"Could not create record.")}finally{busy(false)}
+}
+
+async function joinRecord(value=joinCode.value){
+  const c=norm(value);
+  if(c.length!==6){alert("Enter a six-character record address.");return}
+  busy(true,"Finding record…");
+  try{
+    const {data,error}=await db.from("index_records").select("code,title,created_at").eq("code",c).maybeSingle();
+    if(error)throw error;if(!data)throw new Error("Record "+c+" was not found.");
+    joinCode.value="";showRecord(data);await loadEntries();
+  }catch(e){alert(e.message||"Could not open record.")}finally{busy(false)}
+}
+
+async function shareRecord(){
+  if(!current)return;
+
+  const url=new URL(location.href);
+  url.searchParams.set("record",current.code);
+
+  const shareData={
+    title:"INDEX record "+current.code,
+    text:(current.title||"Shared INDEX record")+" — join this collaborative documentary record.",
+    url:url.toString()
+  };
+
+  try{
+    if(navigator.share){
+      await navigator.share(shareData);
+      setStatus("Record invite shared.");
+      return;
+    }
+
+    if(navigator.clipboard&&window.isSecureContext){
+      await navigator.clipboard.writeText(url.toString());
+      setStatus("Record invite copied.");
+      const old=shareBtn.textContent;
+      shareBtn.textContent="Link copied";
+      setTimeout(()=>shareBtn.textContent=old,1800);
+      return;
+    }
+
+    window.prompt("Copy this record address:",url.toString());
+  }catch(error){
+    if(error&&error.name==="AbortError")return;
+    console.error(error);
+    window.prompt("Copy this record address:",url.toString());
+  }
+}
+
+
+
+function relationshipCounts(){
+  const byEntry=new Map();
+
+  allRelationships.forEach(rel=>{
+    [rel.entry_a,rel.entry_b].forEach(id=>{
+      if(!byEntry.has(id))byEntry.set(id,{links:new Set(),sources:new Set()});
+      const item=byEntry.get(id);
+      item.links.add(rel.entry_a+"-"+rel.entry_b+"-"+rel.relation_type);
+      item.sources.add(rel.participant_id);
+    });
+  });
+
+  return byEntry;
+}
+
+function updateRelationshipSummary(){
+  const uniqueLinks=new Set(
+    allRelationships.map(rel=>rel.entry_a+"-"+rel.entry_b+"-"+rel.relation_type)
+  );
+  const sources=new Set(allRelationships.map(rel=>rel.participant_id));
+
+  relationshipSummary.textContent=
+    "RELATIONSHIPS / "+uniqueLinks.size+
+    " LINK"+(uniqueLinks.size===1?"":"S")+
+    " / "+sources.size+
+    " INDEPENDENT SOURCE"+(sources.size===1?"":"S");
+}
+
+function beginRelationship(entry){
+  if(!selectedEntry){
+    selectedEntry=entry;
+    setStatus("Entry "+String(entry.id).padStart(6,"0")+" selected. Choose a second observation.");
+    renderCurrentView();
+    return;
+  }
+
+  if(selectedEntry.id===entry.id){
+    selectedEntry=null;
+    setStatus("Relationship selection cancelled.");
+    renderCurrentView();
+    return;
+  }
+
+  pendingRelationshipPair=[selectedEntry,entry];
+  selectedEntry=null;
+  relationshipPair.textContent=
+    "ENTRY "+String(pendingRelationshipPair[0].id).padStart(6,"0")+
+    " ↔ ENTRY "+String(pendingRelationshipPair[1].id).padStart(6,"0");
+
+  relationshipOptions.replaceChildren();
+
+  RELATION_TYPES.forEach(([value,label])=>{
+    const button=document.createElement("button");
+    button.type="button";
+    button.textContent=label;
+    button.addEventListener("click",async()=>{
+      relationshipDialog.close();
+      await saveRelationship(value);
+    });
+    relationshipOptions.append(button);
+  });
+
+  relationshipDialog.showModal();
+}
+
+async function saveRelationship(relationType){
+  if(!current||!pendingRelationshipPair)return;
+
+  const ids=pendingRelationshipPair.map(item=>item.id).sort((a,b)=>a-b);
+  pendingRelationshipPair=null;
+  busy(true,"Recording relationship…");
+
+  try{
+    const {error}=await db.from("index_relationships").insert({
+      record_code:current.code,
+      entry_a:ids[0],
+      entry_b:ids[1],
+      relation_type:relationType,
+      participant_id:participant
+    });
+
+    if(error&&error.code!=="23505")throw error;
+
+    await loadEntries(false);
+    setStatus(
+      error&&error.code==="23505"
+        ? "You already proposed that relationship."
+        : "Relationship recorded."
+    );
+  }catch(error){
+    console.error(error);
+    alert("INDEX could not record the relationship.\n\n"+(error.message||"Unknown error"));
+  }finally{
+    busy(false);
+  }
+}
+
+function chooseAttention(file){
+  pendingFile=file;
+  attentionOptions.replaceChildren();
+
+  ATTENTION.forEach(value=>{
+    const button=document.createElement("button");
+    button.type="button";
+    button.textContent=value;
+    button.addEventListener("click",async()=>{
+      attentionDialog.close();
+      const chosen=pendingFile;
+      pendingFile=null;
+      await upload(chosen,value);
+    });
+    attentionOptions.append(button);
+  });
+
+  attentionDialog.showModal();
+}
+
+function renderRelationButtons(entries){
+  relationButtons.replaceChildren();
+  const counts={all:entries.length};
+  ATTENTION.forEach(value=>counts[value]=0);
+  entries.forEach(entry=>{
+    if(entry.attention&&Object.hasOwn(counts,entry.attention))counts[entry.attention]++;
+  });
+
+  ["all",...ATTENTION].forEach(value=>{
+    const button=document.createElement("button");
+    button.type="button";
+    button.classList.toggle("active",activeAttention===value);
+    button.textContent=value.toUpperCase()+" / "+counts[value];
+    button.addEventListener("click",()=>{
+      activeAttention=value;
+      renderCurrentView();
+    });
+    relationButtons.append(button);
+  });
+}
+
+function renderCurrentView(){
+  const visible=activeAttention==="all"
+    ? allEntries
+    : allEntries.filter(entry=>entry.attention===activeAttention);
+
+  renderRelationButtons(allEntries);
+  updateRelationshipSummary();
+  drawTimeline(visible);
+  grid.replaceChildren();
+
+  if(!visible.length){
+    const empty=document.createElement("div");
+    empty.className="empty";
+    empty.textContent=activeAttention==="all"
+      ? "NO ENTRIES YET / ADD THE FIRST PHOTOGRAPH"
+      : "NO "+activeAttention.toUpperCase()+" OBSERVATIONS IN THIS RECORD";
+    grid.append(empty);
+    return;
+  }
+
+  const fragment=document.createDocumentFragment();
+  visible.forEach(entry=>fragment.append(card(entry)));
+  grid.append(fragment);
+}
+
+function drawTimeline(a){
+  timeline.replaceChildren();
+  if(!a.length){const s=document.createElement("span");s.textContent="NO TEMPORAL DATA YET";s.style.cssText="color:var(--muted);font-size:.7rem";timeline.append(s);return}
+  const ordered=[...a].reverse();
+  ordered.forEach((e,i)=>{
+    if(i){const seconds=Math.max(1,(new Date(e.created_at)-new Date(ordered[i-1].created_at))/1000),g=document.createElement("span");g.className="gap";g.style.flexGrow=String(Math.min(12,1+Math.log2(seconds)));g.title=Math.round(seconds)+" seconds";timeline.append(g)}
+    const d=document.createElement("span");d.className="dot";d.title=fmt(e.created_at);timeline.append(d)
+  });
+}
+
+function card(e){
+  const counts=relationshipCounts().get(e.id)||{links:new Set(),sources:new Set()};
+  const article=document.createElement("article");
+  article.className="entry";
+  article.classList.toggle("selected",selectedEntry&&selectedEntry.id===e.id);
+
+  const img=document.createElement("img");
+  img.src=e.image_url;
+  img.alt="A contributed monochrome observation";
+  img.loading="lazy";
+
+  const meta=document.createElement("div");
+  meta.className="meta";
+  meta.textContent=
+    fmt(e.created_at)+"\n"+
+    "ENTRY / "+String(e.id).padStart(6,"0")+"\n"+
+    "ATTENTION / "+(e.attention||"UNASSIGNED").toUpperCase()+"\n"+
+    "LINKS / "+counts.links.size+
+    " · SOURCES / "+counts.sources.size+"\n"+
+    "SOURCE / "+(e.participant_id===participant?"THIS DEVICE":e.participant_id.slice(0,4).toUpperCase());
+  meta.style.whiteSpace="pre-line";
+
+  const relate=document.createElement("button");
+  relate.type="button";
+  relate.className="entry-link-button";
+  relate.textContent=selectedEntry
+    ? (selectedEntry.id===e.id?"CANCEL SELECTION":"RELATE TO THIS")
+    : "BEGIN RELATIONSHIP";
+  relate.addEventListener("click",()=>beginRelationship(e));
+
+  article.append(img,meta,relate);
+  return article;
+}
+
+async function loadEntries(reading=true){
+  if(!current)return;
+  if(reading)setStatus("Reading record…");
+
+  const [entryResult,relationshipResult]=await Promise.all([
+    db.from("index_entries")
+      .select("id,image_url,participant_id,attention,captured_at,created_at")
+      .eq("record_code",current.code)
+      .order("created_at",{ascending:false})
+      .limit(250),
+    db.from("index_relationships")
+      .select("id,entry_a,entry_b,relation_type,participant_id,created_at")
+      .eq("record_code",current.code)
+      .order("created_at",{ascending:true})
+      .limit(1000)
+  ]);
+
+  if(entryResult.error){
+    setStatus("ERROR / "+entryResult.error.message,true);
+    return;
+  }
+
+  if(relationshipResult.error){
+    setStatus("ERROR / "+relationshipResult.error.message,true);
+    return;
+  }
+
+  const a=entryResult.data||[];
+  allEntries=a;
+  allRelationships=relationshipResult.data||[];
+
+  entriesEl.textContent=a.length;
+  contributorsEl.textContent=new Set(a.map(x=>x.participant_id)).size;
+  durationEl.textContent=dur(a);
+  updated.textContent=a.length?"UPDATED "+fmt(a[0].created_at):"";
+
+  renderCurrentView();
+  setStatus("Record "+current.code+" online.");
+}
+
+async function imageFrom(file){
+  const u=URL.createObjectURL(file);
+  try{const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=()=>no(new Error("The photograph could not be opened."));img.src=u});return img}
+  finally{setTimeout(()=>URL.revokeObjectURL(u),1000)}
+}
+
+async function process(file){
+  const img=await imageFrom(file),max=1400,scale=Math.min(1,max/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+  canvas.width=w;canvas.height=h;ctx.drawImage(img,0,0,w,h);
+  const frame=ctx.getImageData(0,0,w,h),p=frame.data,b=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]],step=255/15;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,g=.2126*p[i]+.7152*p[i+1]+.0722*p[i+2],t=(b[y%4][x%4]/15-.5)*step,v=Math.max(0,Math.min(255,Math.round((g+t)/step)*step));p[i]=p[i+1]=p[i+2]=v}
+  ctx.putImageData(frame,0,0);
+  return await new Promise((ok,no)=>canvas.toBlob(v=>v?ok(v):no(new Error("Conversion failed.")),"image/webp",.86))
+}
+
+async function upload(file,attention){
+  if(!current||!file||!file.type.startsWith("image/"))return;
+  busy(true,"Converting to 16-level monochrome…");
+  try{
+    const blob=await process(file),path=current.code+"/"+Date.now()+"-"+crypto.randomUUID()+".webp";
+    busy(true,"Entering photograph into record…");
+    const {error:uerr}=await db.storage.from(BUCKET).upload(path,blob,{contentType:"image/webp",cacheControl:"3600",upsert:false});if(uerr)throw uerr;
+    const url=db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    const {error:rerr}=await db.from("index_entries").insert({record_code:current.code,storage_path:path,image_url:url,participant_id:participant,attention,captured_at:file.lastModified?new Date(file.lastModified).toISOString():null});if(rerr)throw rerr;
+    await db.from("index_records").update({last_activity_at:new Date().toISOString()}).eq("code",current.code);
+    await loadEntries(false);setStatus("Photograph entered into the shared record.");
+  }catch(e){alert("INDEX could not add the photograph.\n\n"+(e.message||"Unknown error"))}finally{photo.value="";busy(false)}
+}
+
+createBtn.addEventListener("click",createRecord);
+joinBtn.addEventListener("click",()=>joinRecord());
+shareBtn.addEventListener("click",shareRecord);
+leaveBtn.addEventListener("click",showStart);
+joinCode.addEventListener("input",()=>joinCode.value=norm(joinCode.value));
+joinCode.addEventListener("keydown",e=>{if(e.key==="Enter")joinRecord()});
+newTitle.addEventListener("keydown",e=>{if(e.key==="Enter")createRecord()});
+photo.addEventListener("change",e=>{
+  const file=e.target.files&&e.target.files[0];
+  if(file)chooseAttention(file);
+});
+relationshipCancel.addEventListener("click",()=>{
+  pendingRelationshipPair=null;
+  relationshipDialog.close();
+});
+relationshipDialog.addEventListener("cancel",()=>{
+  pendingRelationshipPair=null;
+});
+attentionCancel.addEventListener("click",()=>{
+  pendingFile=null;
+  photo.value="";
+  attentionDialog.close();
+});
+attentionDialog.addEventListener("cancel",()=>{
+  pendingFile=null;
+  photo.value="";
+});
+const initial=norm(new URL(location.href).searchParams.get("record"));if(initial.length===6)joinRecord(initial);
+</script>
+</body>
+</html>
