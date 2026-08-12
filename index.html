@@ -1,1 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e9e7df">
+  <title>INDEX</title>
+  <style>
+    :root{--paper:#e9e7df;--panel:#f4f2ea;--ink:#101010;--muted:#68655e;--error:#8b1d16}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);font-family:"Courier New",monospace}
+    body{padding:16px}
+    button,input{font:inherit}
+    button,.upload{min-height:50px;border:2px solid var(--ink);border-radius:0;padding:11px 14px;background:var(--ink);color:var(--paper);font-weight:bold;text-transform:uppercase;cursor:pointer}
+    button.secondary{background:transparent;color:var(--ink)}
+    button:disabled{opacity:.45;cursor:wait}
+    input[type=text]{width:100%;min-height:50px;border:2px solid var(--ink);border-radius:0;padding:10px 12px;background:var(--panel);text-transform:uppercase}
+    input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+    .shell{width:min(1100px,100%);margin:auto}
+    header{display:flex;justify-content:space-between;align-items:end;gap:16px;padding-bottom:12px;border-bottom:3px solid}
+    h1{margin:0;font-size:clamp(2.8rem,11vw,6.3rem);line-height:.8;letter-spacing:-.09em}
+    .version{font-size:.72rem;white-space:nowrap}
+    .screen{display:none}.screen.active{display:block}
+    .intro{max-width:62ch;margin:20px 0 28px;line-height:1.5}
+    .start-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;border:1px solid;background:var(--ink)}
+    .panel{padding:clamp(18px,4vw,36px);background:var(--panel)}
+    .panel h2{margin:0 0 10px;font-size:1rem;text-transform:uppercase}
+    .panel p{min-height:3.5em;margin:0 0 20px;color:var(--muted);line-height:1.4}
+    .field{display:grid;gap:7px;margin-bottom:12px}
+    .field label{font-size:.74rem;text-transform:uppercase}
+    .record-head{display:grid;grid-template-columns:1fr auto;gap:16px;padding:18px 0;border-bottom:1px solid}
+    .label{color:var(--muted);font-size:.72rem;text-transform:uppercase}
+    .code{margin:3px 0 0;font-size:clamp(2.2rem,10vw,5rem);line-height:.9;letter-spacing:.08em}
+    .title{margin:10px 0 0;font-size:1rem;font-weight:normal}
+    .actions{display:grid;gap:8px;min-width:180px}
+    .upload{display:grid;place-items:center;text-align:center}
 
