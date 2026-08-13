@@ -68,18 +68,16 @@
     .relationship-cancel{width:100%;margin-top:12px;background:transparent;color:var(--ink)}
     .entry img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#ccc}
     .meta{min-height:42px;padding:7px;border-top:1px solid;font-size:.64rem;line-height:1.35;overflow-wrap:anywhere}
-    .field-view{position:relative;display:none;height:clamp(720px,82vh,1050px);overflow:hidden;border-bottom:1px solid;background:var(--panel);touch-action:none}
+    .field-view{position:relative;display:none;height:clamp(720px,82vh,1050px);overflow:auto;border-bottom:1px solid;background:var(--panel);touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch}
     .field-view.active{display:block}
-    .field-lines,.field-nodes{position:absolute;inset:0;width:100%;height:100%}
-    .field-lines{pointer-events:none;overflow:visible}
-    .field-line{stroke:var(--ink);stroke-opacity:.3;stroke-width:1}
-    .field-line.supported{stroke-opacity:.7;stroke-width:2}
+    .field-lines{display:none}
+    .field-nodes{position:relative;width:100%;height:100%;min-width:100%;min-height:100%}
     .field-node{position:absolute;width:150px;background:var(--panel);border:1px solid var(--ink);transform:translate(-50%,-50%);cursor:pointer;box-shadow:0 2px 0 rgba(16,16,16,.18)}
     .field-node.unrelated{opacity:.76}
     .field-node.selected{outline:4px solid var(--ink)}
     .field-node img{display:block;width:100%;height:108px;object-fit:cover;background:#ccc}
     .field-node-meta{display:flex;justify-content:space-between;gap:5px;padding:5px 6px;font-size:.6rem;line-height:1.2}
-    .field-legend{position:absolute;left:10px;bottom:10px;z-index:3;padding:7px;background:var(--paper);border:1px solid;font-size:.62rem}
+    .field-legend{position:sticky;left:10px;bottom:10px;z-index:3;width:max-content;max-width:calc(100% - 20px);padding:7px;background:var(--paper);border:1px solid;font-size:.62rem}
     .empty{grid-column:1/-1;min-height:35vh;display:grid;place-items:center;padding:35px 18px;background:var(--panel);text-align:center}
     .working{position:fixed;inset:0;z-index:20;display:none;place-items:center;padding:25px;background:rgba(16,16,16,.94);color:var(--paper);text-align:center}
     .working.visible{display:grid}.working strong{font-size:clamp(1.2rem,6vw,2.7rem);text-transform:uppercase}
@@ -94,12 +92,23 @@
     .attention-cancel{width:100%;margin-top:12px;background:transparent;color:var(--ink)}
     @media(max-width:520px){.attention-options{grid-template-columns:repeat(2,1fr)}}
     footer{padding:15px 0 35px;color:var(--muted);font-size:.68rem}
-    @media(max-width:680px){.start-grid{grid-template-columns:1fr}.record-head{grid-template-columns:1fr}.actions{grid-template-columns:1fr 1fr;min-width:0}.metrics{grid-template-columns:1fr 1fr}.metric:last-child{grid-column:1/-1}.grid{grid-template-columns:1fr}.field-view{height:78vh}.field-node{width:116px}.field-node img{height:82px}}
+    @media(max-width:680px){
+      .start-grid{grid-template-columns:1fr}
+      .record-head{grid-template-columns:1fr}
+      .actions{grid-template-columns:1fr 1fr;min-width:0}
+      .metrics{grid-template-columns:1fr 1fr}
+      .metric:last-child{grid-column:1/-1}
+      .grid{grid-template-columns:1fr}
+      .field-view{height:72vh;overscroll-behavior:contain}
+      .field-node{width:128px}
+      .field-node img{height:92px}
+      .field-node-meta{font-size:.58rem}
+    }
   </style>
 </head>
 <body>
 <main class="shell">
-  <header><h1>INDEX</h1><div class="version">DATABASE DOCUMENTARY / 0.5</div></header>
+  <header><h1>INDEX</h1><div class="version">DATABASE DOCUMENTARY / 0.6</div></header>
 
   <section id="start" class="screen active">
     <p class="intro">Create a shared record for an event, or join one using its six-character address. Each photograph enters the same documentary database.</p>
@@ -151,7 +160,7 @@
     <section id="field-view" class="field-view" aria-label="Relationship view">
       <svg id="field-lines" class="field-lines" aria-hidden="true"></svg>
       <div id="field-nodes" class="field-nodes"></div>
-      <div class="field-legend">CONNECTED ENTRIES DRAW TOGETHER / UNRELATED ENTRIES REMAIN AT THE EDGE</div>
+      <div class="field-legend">DRAG TO EXPLORE / CONNECTED ENTRIES DRAW TOGETHER / UNRELATED ENTRIES REMAIN AT THE EDGE</div>
     </section>
   </section>
 
@@ -491,22 +500,53 @@ function fieldLayout(entries,links,width,height){
 function renderField(entries){
   fieldNodes.replaceChildren();fieldLines.replaceChildren();
   if(!entries.length){fieldNodes.innerHTML='<div class="empty">NO OBSERVATIONS IN THIS VIEW</div>';return}
-  const width=Math.max(320,fieldView.clientWidth),height=Math.max(620,fieldView.clientHeight),links=weightedLinks(entries),nodes=fieldLayout(entries,links,width,height),byId=new Map(nodes.map(node=>[node.id,node]));
-  fieldLines.setAttribute("viewBox","0 0 "+width+" "+height);
-  links.forEach(link=>{
-    const a=byId.get(link.source),b=byId.get(link.target),line=document.createElementNS("http://www.w3.org/2000/svg","line");
-    line.setAttribute("x1",a.x);line.setAttribute("y1",a.y);line.setAttribute("x2",b.x);line.setAttribute("y2",b.y);
-    line.setAttribute("class","field-line"+(link.weight>1?" supported":""));
-    line.setAttribute("data-sources",link.weight);line.setAttribute("aria-label",link.weight+" independent source"+(link.weight===1?"":"s"));fieldLines.append(line);
-  });
+
+  const mobile=window.matchMedia("(max-width:680px)").matches;
+  const viewportWidth=Math.max(320,fieldView.clientWidth);
+  const viewportHeight=Math.max(520,fieldView.clientHeight);
+
+  // On mobile the relationship field is deliberately larger than the screen.
+  // The phone becomes a window onto the record rather than a miniature overview.
+  const width=mobile
+    ? Math.max(900,Math.round(viewportWidth*2.65))
+    : viewportWidth;
+
+  const height=mobile
+    ? Math.max(1050,Math.round(viewportHeight*1.75))
+    : Math.max(620,viewportHeight);
+
+  fieldNodes.style.width=width+"px";
+  fieldNodes.style.height=height+"px";
+
+  const links=weightedLinks(entries);
+  const nodes=fieldLayout(entries,links,width,height);
+
   nodes.forEach(node=>{
     const el=document.createElement("article"),img=document.createElement("img"),meta=document.createElement("div");
     el.className="field-node"+(node.degree?"":" unrelated")+(selectedEntry&&selectedEntry.id===node.id?" selected":"");
-    el.style.left=node.x+"px";el.style.top=node.y+"px";el.title="Begin or complete a relationship";
-    img.src=node.entry.image_url;img.alt="Contributed observation "+String(node.id).padStart(6,"0");img.loading="lazy";
-    meta.className="field-node-meta";meta.innerHTML="<span>ENTRY / "+String(node.id).padStart(6,"0")+"</span><span>LINKS / "+node.degree+"</span>";
-    el.append(img,meta);el.addEventListener("click",()=>beginRelationship(node.entry));fieldNodes.append(el);
+    el.style.left=node.x+"px";
+    el.style.top=node.y+"px";
+    el.title="Begin or complete a relationship";
+
+    img.src=node.entry.image_url;
+    img.alt="Contributed observation "+String(node.id).padStart(6,"0");
+    img.loading="lazy";
+
+    meta.className="field-node-meta";
+    meta.innerHTML="<span>ENTRY / "+String(node.id).padStart(6,"0")+"</span><span>LINKS / "+node.degree+"</span>";
+
+    el.append(img,meta);
+    el.addEventListener("click",()=>beginRelationship(node.entry));
+    fieldNodes.append(el);
   });
+
+  // Start mobile users near the dense centre, while leaving the whole field explorable.
+  if(mobile){
+    requestAnimationFrame(()=>{
+      fieldView.scrollLeft=Math.max(0,(width-viewportWidth)/2);
+      fieldView.scrollTop=Math.max(0,(height-viewportHeight)/2);
+    });
+  }
 }
 
 function drawTimeline(a){
